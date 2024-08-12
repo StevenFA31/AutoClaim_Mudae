@@ -172,8 +172,8 @@ This file includes server-specific configurations such as:
 1. **Clone the Repository**
 
    ```bash
-   git clone <repository_url>
-   cd <repository_directory>
+   git clone https://github.com/StevenFA31/AutoClaim_Mudae.git
+   cd AutoClaim_Mudae
    ```
 
 2. **Install Dependencies**
