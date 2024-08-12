@@ -99,14 +99,14 @@ def simpleRoll(config):
         if 'mentions' in jsonCard[0] and jsonCard[0]['mentions']:
             # Check each mention for the wished username
             for mention in jsonCard[0]['mentions']:
-                if mention["id"] == "319953309592977431":
+                if mention["id"] == config["userId"]:
                     is_wished_user = True
                     break
 
         # Check content and conditions
         is_souhaited = "Souhaité par" in jsonCard[0]['content']
         is_wished = "Wished by" in jsonCard[0]['content']
-        is_user_mentioned = "319953309592977431" in jsonCard[0]['content']
+        is_user_mentioned = config["userId"] in jsonCard[0]['content']
         is_footer_missing_or_icon_url_missing = ('footer' not in jsonCard[0].get('embeds', [{}])[0] or
                                                 'icon_url' not in jsonCard[0].get('embeds', [{}])[0].get('footer', {}))
 
