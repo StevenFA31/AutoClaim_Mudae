@@ -27,6 +27,7 @@ def simpleRoll(config):
     url = f'https://discord.com/api/v8/channels/{config["channelId"]}/messages'
 
     logging.info("Rolling for server %s in channel -> %s", config["serverName"], config["channelName"])
+    # logging.info("Rolling at %s", time.strftime("%H:%M - %d/%m/%y", time.localtime()))
 
     i = 1
     y = 0
@@ -38,13 +39,16 @@ def simpleRoll(config):
     continueRolling = True
     cards = []
 
+    # no_claims_made = True  # Variable to track if any claims have been made
     while continueRolling == True or y < 4:
         try:
             bot.triggerSlashCommand(botID, config["channelId"], config["serverId"], data=rollCommand)
-            time.sleep(1.8)
+            time.sleep(1.8) # Increased from 1.8 to 2.5
             r = requests.get(url, headers=auth)
+            # r.raise_for_status()
             time.sleep(0.8)
             jsonCard = json.loads(r.text)
+            # print(f'jsonCard : {jsonCard[0]}')
         except (requests.RequestException, json.JSONDecodeError) as e:
             logging.error("Error in API request or JSON decoding: %s", e)
             continue
@@ -79,31 +83,41 @@ def simpleRoll(config):
 
         })
 
-        # Initialize the variable for checking if the wished user is mentioned
+# BEFORE
+#         if (("Souhaité par" in jsonCard[0]['content'] and "riixzn" in jsonCard[0]['mentions'][0]["username"]) or \
+#     ("Wished by" in jsonCard[0]['content'] and "riixzn" in jsonCard[0]['mentions'][0]["username"])) or \
+#    (not 'footer' in jsonCard[0]['embeds'][0] or \
+#     not 'icon_url' in jsonCard[0]['embeds'][0]['footer']):
+#             # print(i,' - '+unclaimed+' ---- ',cardPower,' - '+cardName+' - '+cardSeries)
+#             if ("Souhaité par" in jsonCard[0]['content'] and "riixzn" in jsonCard[0]['mentions'][0]["username"]) or \
+#        ("Wished by" in jsonCard[0]['content'] and "riixzn" in jsonCard[0]['mentions'][0]["username"]):
 
+        # Initialize the variable for checking if the wished user is mentioned
         is_wished_user = False
 
         # Check if 'mentions' key exists and is not empty
         if 'mentions' in jsonCard[0] and jsonCard[0]['mentions']:
             # Check each mention for the wished username
             for mention in jsonCard[0]['mentions']:
-                if mention["id"] == config["userId"]:
+                if mention["id"] == "319953309592977431":
                     is_wished_user = True
                     break
 
         # Check content and conditions
+        is_souhaited = "Souhaité par" in jsonCard[0]['content']
         is_wished = "Wished by" in jsonCard[0]['content']
-        is_user_mentioned = config["userId"] in jsonCard[0]['content']
+        is_user_mentioned = "319953309592977431" in jsonCard[0]['content']
         is_footer_missing_or_icon_url_missing = ('footer' not in jsonCard[0].get('embeds', [{}])[0] or
                                                 'icon_url' not in jsonCard[0].get('embeds', [{}])[0].get('footer', {}))
 
-        if (is_wished and is_wished_user and is_user_mentioned) or is_footer_missing_or_icon_url_missing:
-            if (is_wished and is_wished_user and is_user_mentioned):
+        if ((is_souhaited or is_wished) and is_wished_user and is_user_mentioned) or is_footer_missing_or_icon_url_missing:
+            if ((is_souhaited or is_wished) and is_wished_user and is_user_mentioned):
                 logging.info("%d - %s ---- %d - %s - %s", i, wish, cardPower, cardName, cardSeries)
                 print("Ooh it's your wished card !")
             else:
                 logging.info("%d - %s ---- %d - %s - %s", i, unclaimed,cardPower, cardName, cardSeries)
             if cardPower >= config["claimCriteria"]["minKakeraPoints"] or cardSeries in config['desiredSeries']:
+                # print('Trying to Claim '+ cardName)
                 logging.info("Trying to claim %s", cardName)
                 r= requests.put(f'https://discord.com/api/v8/channels/{config["channelId"]}/messages/{idMessage}/reactions/❤️/%40me',headers=auth)
                 time.sleep(1.8)
@@ -125,19 +139,23 @@ def simpleRoll(config):
                             x= requests.get(f'https://discord.com/api/v9/channels/{config["channelId"]}/messages',headers=auth)
                             time.sleep(1)
                             if config["claimedCardText"] in x.json()[0]["content"]:
+                                # no_claims_made = False
                                 logging.warning("%s IS NOW YOUR PROPERTY !", cardName)
                             else:
                                 logging.error("There was a problem AFTER the reset claim. Continue rolling ...") 
                     else:
                         logging.warning("You don't have reset claim. %s is not claimed.", cardName)
+                        # logging.error("Reactions key not found in the JSON response.")
 
         else: 
+                # print(i,' - '+claimed+' ---- ',cardPower,' - '+cardName+' - '+cardSeries)
                 logging.info("%d - %s ---- %d - %s - %s", i, claimed,cardPower, cardName, cardSeries)
 
         try:
             cardsKakera = jsonCard[0]['components'][0]['components'][0]['emoji']['name']
             if cardsKakera in config['desiredKakeras']:
                 y -= 1 
+                # print(kakera+' - '+kakera+' - Trying to react to '+ cardsKakera+ ' of '+ cardName)
                 logging.info('%s - %s - Trying to react to %s of %s', kakera, kakera, cardsKakera, cardName)
                 bot.click(jsonCard[0]['author']["id"], channelID=jsonCard[0]["channel_id"], guildID=config["serverId"], messageID=jsonCard[0]["id"], messageFlags=jsonCard[0]['flags'], data={'component_type': 2, 'custom_id': jsonCard[0]['components'][0]['components'][0]['custom_id']})
                 time.sleep(1)
@@ -181,12 +199,27 @@ def simpleRoll(config):
 
     def parse_remaining_time(content):
         # Check for claim availability and time remaining
+        # English patterns
         can_claim_en = re.search(r'you __can__ claim right now!', content)
         if can_claim_en:
             # Look for remaining time when claim is available
             time_match = re.search(r'The next claim reset is in \*\*(\d+)\*\* min', content)
             if not time_match:
                 time_match = re.search(r'The next claim reset is in \*\*(\d+)h (\d+)\*\* min', content)
+
+            if time_match:
+                if len(time_match.groups()) == 1:
+                    return True, int(time_match.group(1))  # Claim available, return remaining minutes
+                elif len(time_match.groups()) == 2:
+                    return True, int(time_match.group(1)) * 60 + int(time_match.group(2))  # Claim available, return total minutes
+
+        # French patterns        
+        can_claim_fr = re.search(r'vous __pouvez__ vous marier dès maintenant', content)
+        if can_claim_fr:
+            # Look for remaining time when claim is available
+            time_match = re.search(r'Le prochain reset est dans \*\*(\d+)\*\* min', content)
+            if not time_match:
+                time_match = re.search(r'Le prochain reset est dans \*\*(\d+)h (\d+)\*\* min', content)
 
             if time_match:
                 if len(time_match.groups()) == 1:
@@ -203,10 +236,19 @@ def simpleRoll(config):
         no_claim_en_hours = re.search(r'you can\'t claim for another \*\*(\d+)h (\d+)\*\* min', content)
         if no_claim_en_hours:
             return False, int(no_claim_en_hours.group(1)) * 60 + int(no_claim_en_hours.group(2))  # Claim not available, return total minutes
+            
+        no_claim_fr = re.search(r'temps restant avant de pouvoir vous remarier : \*\*(\d+)\*\* min', content)
+        if no_claim_fr:
+            return False, int(no_claim_fr.group(1))
+        
+        no_claim_fr_hours = re.search(r'temps restant avant de pouvoir vous remarier : \*\*(\d+)h (\d+)\*\* min', content)
+        if no_claim_fr_hours:
+            return False, int(no_claim_fr_hours.group(1)) * 60 + int(no_claim_fr_hours.group(2))
         
         return None, None
 
     content = tu.json()[0]['content']
+    # print(content)
     time.sleep(1)
     can_claim, remaining_minutes = parse_remaining_time(content)
 
@@ -240,37 +282,37 @@ def simpleRoll(config):
     else:
         logging.error('Unable to parse claim status or time from the content.')
 
-    if config["pokeRoll"] and "p is available!" in tu.json()[0]["content"]:
+    if "p est disponible" in tu.json()[0]["content"]:
         logging.warning('Trying to roll Pokeslot ...')
         try:
             requests.post(url=url , headers = auth, data = {'content' : '$p'})
             time.sleep(1)
             pokemon= requests.get(f'https://discord.com/api/v9/channels/{config["channelId"]}/messages',headers=auth)
             time.sleep(1)
-            if "Congratulations, you won an uncommon nothing." in pokemon.json()[0]["content"]:
-                logging.warning('Congratulation ! You won 0 pokemon.')
-            if "You won" in pokemon.json()[0]["content"]:
+            if "Bravo, vous venez de gagner un incroyable rien." in pokemon.json()[0]["content"]:
+                logging.warning('Congratulation ! You won 0 pokemon. grosse merde')
+            if "Vous avez obtenu" in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Common pokemon.')
-            if "That's better: you got an uncommon" in pokemon.json()[0]["content"]:
+            if "Voilà qui est mieux : vous venez de gagner un non-commun" in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Uncommon pokemon.')
-            if "Oh, it's rare: you just won" in pokemon.json()[0]["content"]:
+            if "Oh, c'est rare : vous venez d'obtenir un" in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Rare pokemon.')
-            if "Very impressive!!! You got" in pokemon.json()[0]["content"]:
+            if "Très impressionnant !!! Vous avez eu un" in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Very Rare pokemon.')
-            if "Congrats, you just won... " in pokemon.json()[0]["content"]:
+            if "Félicitations, vous venez de gagner un... Un..." in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Legendary pokemon.')
-            if "You just obtained a" in pokemon.json()[0]["content"]:
-                logging.warning('Congratulation ! You won 1 Ultra Beast pokemon.')
+            # if "Bravo, vous venez de gagner un incroyable rien." in pokemon.json()[0]["content"]:
+            #     logging.warning('Congratulation ! You won 1 Ultra Beast pokemon.')
             if "ERROR 4761" in pokemon.json()[0]["content"]:
                 logging.warning('Congratulation ! You won 1 Paradox pokemon.')
             if "Ces couleurs semblent inhabituelles..." in pokemon.json()[0]["content"]:
-                logging.warning("There is a Shiny in your pokemon")
+                logging.warning('There are a Shiny.')
 
         except requests.RequestException as e:
             logging.error("Error in Pokeslot roll request: %s", e)
     
     if "You may vote right now!" in tu.json()[0]["content"] or "Vous pouvez voter" in tu.json()[0]["content"]:
-        logging.warning("YOUR VOTE IS AVAILABLE!")
+        logging.warning("YOUR VOTE IS AVAILABLE! -> https://top.gg/bot/432610292342587392/vote")
         
     if "daily is available!" in tu.json()[0]["content"] or "daily est disponible !" in tu.json()[0]["content"]:
         logging.warning("YOUR DAILY IS AVAILABLE! Try to claim ...")

@@ -14,15 +14,24 @@ def schedule_job(config_name):
     else:
         print(f"Configuration {config_name} not found.")
 
+def run_immediately_for_test():
+    simpleRoll(Vars.get_config("myServer"))
+
 # Schedule jobs for each configuration
 print("\n")
 print("Bot.py launch, waiting for schedule job ...")
 print("\n")
 
-schedule_job("myServer")
+if len(sys.argv) > 1 and sys.argv[1] == "--run-now":
+    print("Running jobs immediately...")
+    run_immediately_for_test()
+else:
+    schedule_job("gomenasai")
+    schedule_job("yameteKudasai")
+    schedule_job("myServer")
 
-print("\n")
+    print("\n")
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
