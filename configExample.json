@@ -1,0 +1,25 @@
+{
+    "myServer": {
+        "serverName": "<YOUR_SERVER_NAME>",
+        "channelName": "<YOUR_CHANNEL_NAME>",
+        "token": "<YOUR_BOT_TOKEN>",
+        "serverId": "<YOUR_SERVER_ID>",
+        "channelId": "<YOUR_CHANNEL_ID>",
+        "userId": "<YOUR_USER_ID>",
+
+        "repeatMinute": "38",
+        "desiredSeries": ["Naruto","Avatar: The Last Airbender","The Legend of Korra"],
+        "desiredKakeras": ["kakeraP", "kakeraB", "kakeraT", "kakeraG", "kakeraY", "kakeraO", "kakeraR", "kakeraW", "kakeraL"],
+        "rollCommand": "ma",
+        "claimCriteria": {
+            "minKakeraPoints": 500
+        },
+        "pokeRoll": true,
+
+        "claimedCardText": "are now married",
+        "noClaimCardAvailableText": "For this server, you can claim once per interval of 3h",
+        "useDailyKakeraText": "added to your kakera collection",
+        "noDailyKakeraAvailableText": "Next $dk reset in",
+        "noReactKakeraAvailableText": "You can't react to kakera for"
+    }
+}

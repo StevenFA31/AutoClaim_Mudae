@@ -1,0 +1,18 @@
+# Ignore compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore __pycache__ directories
+__pycache__/
+
+# Ignore environment-specific files
+*.env
+
+# Ignore config files (if you don't want them in version control)
+config.json
+ExampleConfig.json
+
+# Optionally, ignore test result files or folders if needed
+*.log
+tests/
